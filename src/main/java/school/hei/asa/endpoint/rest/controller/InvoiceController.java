@@ -48,7 +48,7 @@ public class InvoiceController {
       InvoiceService invoiceService,
       BucketComponent bucketComponent,
       ThInvoiceService thInvoiceService,
-      @Value("ACCOUNTANTS") String accountants) {
+      @Value("${ACCOUNTANTS}") String accountants) {
     this.workerFromAuthentication = workerFromAuthentication;
     this.workerToModelAdder = workerToModelAdder;
     this.invoicePDFGenerator = invoicePDFGenerator;
@@ -103,6 +103,7 @@ public class InvoiceController {
   @GetMapping("/invoice/generate")
   public ResponseEntity<byte[]> generateInvoice(
       Model model, Authentication authentication, @ModelAttribute ThInvoiceForm invoiceForm) {
+    log.info("accountants : {}", accountants);
     var workerCodeOrAuth = workerFromAuthentication.apply(authentication).get().code();
     var worker = workerToModelAdder.apply(workerCodeOrAuth, model);
     var invoice = thInvoiceService.extractInvoice(worker, invoiceForm);
