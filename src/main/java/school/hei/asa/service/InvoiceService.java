@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import school.hei.asa.endpoint.event.EventProducer;
 import school.hei.asa.endpoint.event.model.NewInvoiceGenerated;
+import school.hei.asa.model.BankAccount;
 import school.hei.asa.model.InvoiceForm;
 import school.hei.asa.model.InvoiceReference;
 import school.hei.asa.model.MissionExecution;
@@ -63,10 +64,8 @@ public class InvoiceService {
                 .isBefore(lastCurrentMonthDay)
             && LocalDate.ofInstant(contracts.getFirst().entranceInstant(), UTC)
                 .isAfter(firstCurrentMonthDay);
-    var bankAccount =
-        bankAccountRepository.findByWorkerCode(worker.code()) != null
-            ? bankAccountRepository.findByWorkerCode(worker.code()).toString()
-            : "";
+    var bankAccountEntity = bankAccountRepository.findByWorkerCode(worker.code());
+    var bankAccount = bankAccountEntity != null ? bankAccountEntity.toString() : "";
     if (hasUpgradedLevel) {
       var firstContract = contracts.getFirst();
       var secondContract = contracts.get(1);
@@ -82,7 +81,9 @@ public class InvoiceService {
               lastCurrentMonthDay);
       var firstInvoiceForm = generateInvoiceFormFrom(firstTotalDaysWorked, firstContract);
       var secondInvoiceForm = generateInvoiceFormFrom(secondTotalDaysWorked, secondContract);
-      var total = firstInvoiceForm.amount().add(secondInvoiceForm.amount());
+        var firstAmount = firstInvoiceForm.amount() != null ? firstInvoiceForm.amount() : BigDecimal.ZERO;
+        var secondAmount = secondInvoiceForm.amount() != null ? secondInvoiceForm.amount() : BigDecimal.ZERO;
+        var total = firstAmount.add(secondAmount);
       var parsedTotal = numberConverter.convertToWords(numberParser.parseToNumber(total));
       return new InvoiceForm(
           invoiceForm.id(),
@@ -135,7 +136,7 @@ public class InvoiceService {
     Double unitPrice =
         switch (contractLevel.type()) {
           case partnerContractor, studentContractor -> contractLevel.dailyPay();
-          case fullTimeEmployee -> null;
+          case fullTimeEmployee -> 0.0;
         };
     var amount = BigDecimal.valueOf(totalDaysWorked * unitPrice);
     var parsedAmount = numberConverter.convertToWords(numberParser.parseToNumber(amount));

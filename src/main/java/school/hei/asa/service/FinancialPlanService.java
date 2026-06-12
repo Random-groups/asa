@@ -61,45 +61,45 @@ public class FinancialPlanService {
     return map;
   }
 
-  private Map<Month, Argent> mapOfExecuted(int year) {
-    var map = new HashMap<Month, Argent>();
-    var workers = workerRepository.findAll();
+    private Map<Month, Argent> mapOfExecuted(int year) {
+        var map = new HashMap<Month, Argent>();
+        var workers = workerRepository.findAll();
 
-    for (Month m : Month.values()) {
-      var amount =
-          extractInvoiceDataByWorkers(workers, YearMonth.of(year, m)).stream()
-              .map(InvoiceForm::amount)
-              .reduce(BigDecimal::add)
-              .get();
-      map.put(
-          m,
-          amount.equals(BigDecimal.ZERO)
-              ? new Argent(0, MGA)
-              : new Argent(amount.doubleValue(), MGA).mult(-1));
+        for (Month m : Month.values()) {
+            var amount =
+                    extractInvoiceDataByWorkers(workers, YearMonth.of(year, m)).stream()
+                            .map(InvoiceForm::amount)
+                            .map(a -> a == null ? BigDecimal.ZERO : a)
+                            .reduce(BigDecimal::add)
+                            .get();
+            map.put(
+                    m,
+                    amount.equals(BigDecimal.ZERO)
+                            ? new Argent(0, MGA)
+                            : new Argent(amount.doubleValue(), MGA).mult(-1));
+        }
+        return map;
     }
-    return map;
-  }
-
   public List<InvoiceForm> extractInvoiceDataByWorkers(List<Worker> workers, YearMonth yearMonth) {
-    var invoiceForm =
-        new InvoiceForm(
-            UUID.randomUUID().toString(),
-            yearMonth,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-    return workers.stream()
+      InvoiceForm invoiceForm;
+      invoiceForm = new InvoiceForm(
+          UUID.randomUUID().toString(),
+          yearMonth,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null);
+      return workers.stream()
         .map(worker -> invoiceService.extractInvoiceData(worker, invoiceForm))
         .toList();
   }
