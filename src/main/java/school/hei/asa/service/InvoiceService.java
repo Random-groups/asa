@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import school.hei.asa.endpoint.event.EventProducer;
 import school.hei.asa.endpoint.event.model.NewInvoiceGenerated;
-import school.hei.asa.model.BankAccount;
 import school.hei.asa.model.InvoiceForm;
 import school.hei.asa.model.InvoiceReference;
 import school.hei.asa.model.MissionExecution;
@@ -81,9 +80,11 @@ public class InvoiceService {
               lastCurrentMonthDay);
       var firstInvoiceForm = generateInvoiceFormFrom(firstTotalDaysWorked, firstContract);
       var secondInvoiceForm = generateInvoiceFormFrom(secondTotalDaysWorked, secondContract);
-        var firstAmount = firstInvoiceForm.amount() != null ? firstInvoiceForm.amount() : BigDecimal.ZERO;
-        var secondAmount = secondInvoiceForm.amount() != null ? secondInvoiceForm.amount() : BigDecimal.ZERO;
-        var total = firstAmount.add(secondAmount);
+      var firstAmount =
+          firstInvoiceForm.amount() != null ? firstInvoiceForm.amount() : BigDecimal.ZERO;
+      var secondAmount =
+          secondInvoiceForm.amount() != null ? secondInvoiceForm.amount() : BigDecimal.ZERO;
+      var total = firstAmount.add(secondAmount);
       var parsedTotal = numberConverter.convertToWords(numberParser.parseToNumber(total));
       return new InvoiceForm(
           invoiceForm.id(),
