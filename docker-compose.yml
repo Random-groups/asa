@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: asa-postgres
+    environment:
+      POSTGRES_DB: asa
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: irina
+    ports:
+      - "5432:5432"
+    volumes:
+      - asa-pg-data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - asa-network
+
+  casdoor:
+    image: casbin/casdoor:latest
+    container_name: asa-casdoor
+    ports:
+      - "8000:8000"
+      - "7001:7001"
+    volumes:
+      - ./casdoor-conf/app.conf:/conf/app.conf
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - asa-network
+
+volumes:
+  asa-pg-data:
+
+networks:
+  asa-network:
+    driver: bridge
