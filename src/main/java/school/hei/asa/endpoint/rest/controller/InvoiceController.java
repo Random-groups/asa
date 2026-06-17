@@ -24,7 +24,6 @@ import school.hei.asa.endpoint.rest.model.th.ThInvoiceForm;
 import school.hei.asa.endpoint.rest.security.WorkerFromAuthentication;
 import school.hei.asa.endpoint.rest.service.InvoicePDFGenerator;
 import school.hei.asa.endpoint.rest.service.ThInvoiceService;
-import school.hei.asa.file.bucket.BucketComponent;
 import school.hei.asa.service.InvoiceService;
 
 @Slf4j
@@ -36,9 +35,7 @@ public class InvoiceController {
   private final WorkerToModelAdder workerToModelAdder;
   private final InvoicePDFGenerator invoicePDFGenerator;
   private final InvoiceService invoiceService;
-  private final BucketComponent bucketComponent;
   private final ThInvoiceService thInvoiceService;
-  private static final String INVOICES_FOLDER = "invoices/";
 
   @GetMapping("/invoice")
   public String getInvoicePage(
@@ -95,12 +92,8 @@ public class InvoiceController {
     thInvoiceService.saveInvoiceReference(invoice.invoiceData(), worker);
     log.info("Generating name for bucket key...");
     var fileName = thInvoiceService.generateInvoiceFileName(worker);
-    log.info("uploading...");
     log.info("fileName = {}", fileName);
-    bucketComponent.upload(pdfFile, INVOICES_FOLDER + fileName);
 
-    log.info("sending mail copies...");
-    invoiceService.sendGenerateInvoiceEvent(invoice.invoiceData().id());
     return ResponseEntity.ok()
         .header(CONTENT_DISPOSITION, "attachment; filename=" + fileName)
         .contentType(APPLICATION_PDF)

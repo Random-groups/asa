@@ -6,11 +6,13 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import school.hei.asa.endpoint.rest.controller.mapper.ThDailyExecutionFormMapper;
 import school.hei.asa.endpoint.rest.model.th.ThDailyExecutionForm;
 import school.hei.asa.endpoint.rest.security.WorkerFromAuthentication;
 import school.hei.asa.endpoint.rest.service.ThMissionService;
 import school.hei.asa.repository.DailyExecutionRepository;
+import school.hei.asa.service.ContractService;
 
 @Controller
 @AllArgsConstructor
@@ -19,6 +21,7 @@ public class DailyExecutionController {
   private final DailyExecutionRepository dailyExecutionRepository;
   private final WorkerFromAuthentication workerFromAuthentication;
   private final ThMissionService thMissionService;
+  private final ContractService contractService;
 
   @GetMapping("/daily-execution")
   public String getDailyExecutionForm(Model model) {
@@ -28,11 +31,19 @@ public class DailyExecutionController {
   }
 
   @PostMapping("/daily-execution")
-  public String createDailyExecution(Authentication authentication, ThDailyExecutionForm dmeForm) {
+  public String createDailyExecution(
+      Authentication authentication, ThDailyExecutionForm dmeForm,
+      RedirectAttributes redirectAttributes) {
     var worker = workerFromAuthentication.apply(authentication).get();
-    var dailyExecution = thDailyExecutionFormMapper.toDomain(dmeForm, worker);
 
-    dailyExecutionRepository.save(dailyExecution);
+    try {
+      var dailyExecution = thDailyExecutionFormMapper.toDomain(dmeForm, worker);
+      contractService.assertRemainingDays(worker.code(), dailyExecution.date());
+      dailyExecutionRepository.save(dailyExecution);
+    } catch (Exception e) {
+      redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+      return "redirect:/daily-execution";
+    }
     return "redirect:/work-and-care-calendar";
   }
 }

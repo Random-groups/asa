@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.core.Authentication;
 import org.springframework.ui.Model;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import school.hei.asa.conf.FacadeIT;
 import school.hei.asa.endpoint.rest.model.th.ThDailyExecutionForm;
 import school.hei.asa.endpoint.rest.security.SecurityConfig;
@@ -49,6 +50,7 @@ class DailyExecutionControllerIT extends FacadeIT {
   Authentication authentication;
   Worker authenticatedWorker;
   Model model;
+  RedirectAttributes redirectAttributes;
 
   @BeforeEach
   void setUp() {
@@ -65,6 +67,7 @@ class DailyExecutionControllerIT extends FacadeIT {
     var mission2 = new Mission("mission2-code", "title2", "description2", 2, product);
     missionRepository.saveAll(List.of(mission1, mission2));
     model = mock(Model.class);
+    redirectAttributes = mock(RedirectAttributes.class);
   }
 
   @Test
@@ -90,7 +93,7 @@ class DailyExecutionControllerIT extends FacadeIT {
             null,
             null);
 
-    dailyExecutionController.createDailyExecution(authentication, dmeForm);
+    dailyExecutionController.createDailyExecution(authentication, dmeForm, redirectAttributes);
 
     var savedWorker = workerRepository.findByCode(authenticatedWorker.code());
     var dailyExecutions =
@@ -130,10 +133,10 @@ class DailyExecutionControllerIT extends FacadeIT {
             null,
             null);
 
-    dailyExecutionController.createDailyExecution(authentication, dmeForm);
+    dailyExecutionController.createDailyExecution(authentication, dmeForm, redirectAttributes);
     assertThrows(
         Exception.class,
-        () -> dailyExecutionController.createDailyExecution(authentication, dmeForm));
+        () -> dailyExecutionController.createDailyExecution(authentication, dmeForm, redirectAttributes));
   }
 
   @Test
@@ -175,7 +178,7 @@ class DailyExecutionControllerIT extends FacadeIT {
               () -> {
                 try {
                   latch.await();
-                  return dailyExecutionController.createDailyExecution(authentication, dmeForm);
+                  return dailyExecutionController.createDailyExecution(authentication, dmeForm, redirectAttributes);
                 } catch (Exception e) {
                   return e.getMessage();
                 }

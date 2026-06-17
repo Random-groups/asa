@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import school.hei.asa.conf.FacadeIT;
 import school.hei.asa.endpoint.rest.controller.DailyExecutionController;
 import school.hei.asa.endpoint.rest.model.th.ThDailyExecutionForm;
@@ -41,6 +42,7 @@ class CalendarServiceIT extends FacadeIT {
 
   Authentication authentication;
   String authenticatedWorkerCode = "worker-code";
+  RedirectAttributes redirectAttributes;
 
   @Autowired CalendarService calendarService;
 
@@ -48,6 +50,7 @@ class CalendarServiceIT extends FacadeIT {
   void setUp() {
     authentication = authentication();
     setUpProductsAndMissions();
+    redirectAttributes = mock(RedirectAttributes.class);
   }
 
   @Test
@@ -70,7 +73,8 @@ class CalendarServiceIT extends FacadeIT {
             null,
             null,
             null,
-            null));
+            null),
+        redirectAttributes);
 
     var worker = workerRepository.findByCode(authenticatedWorkerCode);
     var datesByDailyExecutionType = calendarService.datesByDailyExecutionType(worker, 2024);
@@ -102,7 +106,8 @@ class CalendarServiceIT extends FacadeIT {
             null,
             null,
             null,
-            null));
+            null),
+        redirectAttributes);
     dailyExecutionController.createDailyExecution(
         authentication,
         new ThDailyExecutionForm(
@@ -121,7 +126,8 @@ class CalendarServiceIT extends FacadeIT {
             null,
             null,
             null,
-            null));
+            null),
+        redirectAttributes);
 
     var worker = workerRepository.findByCode(authenticatedWorkerCode);
     var datesByDailyExecutionType = calendarService.datesByDailyExecutionType(worker, 2025);
@@ -150,7 +156,8 @@ class CalendarServiceIT extends FacadeIT {
             null,
             null,
             null,
-            null));
+            null),
+        redirectAttributes);
 
     var worker = workerRepository.findByCode(authenticatedWorkerCode);
     var datesByDailyExecutionType = calendarService.datesByDailyExecutionType(worker, 2024);

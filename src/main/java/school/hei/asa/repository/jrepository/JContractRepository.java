@@ -1,5 +1,6 @@
 package school.hei.asa.repository.jrepository;
 
+import java.time.Instant;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -23,4 +24,16 @@ public interface JContractRepository extends JpaRepository<JContract, String> {
 
   @Query("SELECT c FROM JContract c WHERE c.endInstant IS NULL AND c.durationInDays != 0")
   List<JContract> findActiveContracts();
+
+  @Query(
+      """
+      SELECT c FROM JContract c
+      WHERE c.worker.code = ?1
+      AND c.entranceInstant <= ?2
+      AND (c.endInstant IS NULL OR c.endInstant >= ?3)
+      AND c.durationInDays != 0
+      ORDER BY c.entranceInstant DESC
+      """)
+  List<JContract> findActiveContractByWorkerAtDate(
+      String workerCode, Instant dayEnd, Instant dayStart);
 }

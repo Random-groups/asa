@@ -1,5 +1,6 @@
 package school.hei.asa.service;
 
+import static java.time.ZoneId.systemDefault;
 import static java.util.Locale.FRENCH;
 import static school.hei.asa.model.DailyExecution.Type.fullCare;
 import static school.hei.asa.model.DailyExecution.Type.fullWork;
@@ -60,27 +61,44 @@ public class ContractService {
     if (executions.isEmpty()) {
       return "-";
     }
-    var result =
-        executions.stream()
-            .map(
-                dailyExecution -> {
-                  var type = dailyExecution.type(careProductCodeSupplier.get());
-                  if (type.equals(fullWork)) {
-                    return 1.0d;
-                  } else if (type.equals(fullCare)) {
-                    return 0.0d;
-                  }
-                  return dailyExecution.executions().stream()
-                      .map(
-                          me -> {
-                            return missionService.isUnpaidCare(me) ? 0.0d : me.dayPercentage();
-                          })
-                      .reduce(Double::sum)
-                      .get();
-                })
-            .reduce(Double::sum)
-            .get();
-    return String.format("%.1f", result);
+    return String.format("%.1f", computeWorkedDaysDouble(executions));
+  }
+
+  private double computeWorkedDaysDouble(List<DailyExecution> executions) {
+    return executions.stream()
+        .mapToDouble(
+            dailyExecution -> {
+              var type = dailyExecution.type(careProductCodeSupplier.get());
+              if (type.equals(fullWork)) {
+                return 1.0d;
+              } else if (type.equals(fullCare)) {
+                return 0.0d;
+              }
+              return dailyExecution.executions().stream()
+                  .mapToDouble(
+                      me -> missionService.isUnpaidCare(me) ? 0.0d : me.dayPercentage())
+                  .sum();
+            })
+        .sum();
+  }
+
+  public void assertRemainingDays(String workerCode, LocalDate date) {
+    var contractOpt = contractRepository.findActiveContractByWorkerAtDate(workerCode, date);
+    if (contractOpt.isEmpty()) {
+      throw new IllegalArgumentException(
+          "Cannot point: current contract has expired");
+    }
+    var contract = contractOpt.get();
+    var startDate = contract.entranceInstant().atZone(systemDefault()).toLocalDate();
+    var dailyExecutions =
+        dailyExecutionRepository.findByWorkerCodeAndDateBetween(
+            workerCode, startDate, date.minusDays(1));
+    var workedDays = computeWorkedDaysDouble(dailyExecutions);
+
+    if ((long) workedDays >= contract.duration().toDays()) {
+      throw new IllegalArgumentException(
+          "Cannot point: no remaining days available in the current contract");
+    }
   }
 
   public List<Contract> findActiveContracts() {
