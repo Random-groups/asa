@@ -113,40 +113,44 @@ public class ContractService {
     return contractRepository.findAllActiveContracts();
   }
 
+  private Optional<Contract> findActiveContract(List<Contract> contracts) {
+    return contracts.stream().filter(c -> c.endInstant() == null).findFirst();
+  }
+
   public boolean hasRemainingDays(Worker worker) {
     var contracts = contractRepository.findAllByWorker(worker);
-    var activeContract =
-        contracts.stream().filter(c -> c.endInstant() == null).findFirst().orElse(null);
+    var activeContract = findActiveContract(contracts);
 
-    if (activeContract == null) {
+    if (activeContract.isEmpty()) {
       return false;
     }
 
-    var durationDays = (int) activeContract.duration().toDays();
+    var contract = activeContract.get();
+    var durationDays = (int) contract.duration().toDays();
     if (durationDays <= 0) {
       return true;
     }
 
-    var workDays = usedDays(worker, activeContract);
+    var workDays = usedDays(worker, contract);
 
     return workDays < durationDays;
   }
 
   public long getRemainingDaysByWorker(Worker worker) {
     var contracts = contractRepository.findAllByWorker(worker);
-    var activeContract =
-        contracts.stream().filter(c -> c.endInstant() == null).findFirst().orElse(null);
+    var activeContract = findActiveContract(contracts);
 
-    if (activeContract == null) {
+    if (activeContract.isEmpty()) {
       return -1;
     }
 
-    var durationDays = activeContract.duration().toDays();
+    var contract = activeContract.get();
+    var durationDays = contract.duration().toDays();
     if (durationDays <= 0) {
       return Long.MAX_VALUE;
     }
 
-    var usedDays = usedDays(worker, activeContract);
+    var usedDays = usedDays(worker, contract);
     return durationDays - usedDays;
   }
 
