@@ -33,8 +33,10 @@ class ContractServiceWorkedDaysTest {
   private final MissionService missionService = mock(MissionService.class);
   private final CareProductCodeSupplier careProductCodeSupplier =
       mock(CareProductCodeSupplier.class);
+
   @SuppressWarnings("unchecked")
   private final EventProducer<ContractAlertRequested> eventProducer = mock(EventProducer.class);
+
   private final ContractService contractService =
       new ContractService(
           workerRepository,
