@@ -11,7 +11,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import school.hei.asa.CareProductCodeSupplier;
 import school.hei.asa.endpoint.event.EventProducer;
@@ -39,8 +38,10 @@ class ContractServiceTest {
   private final MissionService missionService = mock(MissionService.class);
   private final CareProductCodeSupplier careProductCodeSupplier =
       mock(CareProductCodeSupplier.class);
+
   @SuppressWarnings("unchecked")
   private final EventProducer<ContractAlertRequested> eventProducer = mock(EventProducer.class);
+
   private final int alertThreshold = 10;
   private final ContractService contractService =
       new ContractService(
