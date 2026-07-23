@@ -129,7 +129,7 @@ public class InvoiceService {
         .sum();
   }
 
-  public void saveInvoiceReference(InvoiceForm invoiceForm, Worker worker) {
+  public void saveInvoice(InvoiceForm invoiceForm, Worker worker) {
     var invoiceReference =
         new InvoiceReference(invoiceForm.id(), invoiceForm.yearMonth(), null, worker);
     invoiceReferenceRepository.saveInvoiceReference(invoiceReference);

@@ -48,7 +48,7 @@ public class ContractService {
       MissionService missionService,
       CareProductCodeSupplier careProductCodeSupplier,
       EventProducer<ContractAlertRequested> eventProducer,
-      @Value("${asa.contract.alert.threshold}") int alertThreshold) {
+      @Value("${ASA_CONTRACT_ALERT_THRESHOLD}") int alertThreshold) {
     this.workerRepository = workerRepository;
     this.contractRepository = contractRepository;
     this.dailyExecutionRepository = dailyExecutionRepository;

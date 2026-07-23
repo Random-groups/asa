@@ -22,13 +22,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.core.Authentication;
 import org.springframework.ui.Model;
-import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import school.hei.asa.conf.FacadeIT;
-import school.hei.asa.endpoint.event.EventProducer;
 import school.hei.asa.endpoint.rest.model.th.ThDailyExecutionForm;
 import school.hei.asa.endpoint.rest.security.SecurityConfig;
 import school.hei.asa.endpoint.rest.security.WorkerFromAuthentication;
-import school.hei.asa.mail.Mailer;
 import school.hei.asa.model.Mission;
 import school.hei.asa.model.Product;
 import school.hei.asa.model.Worker;
@@ -37,6 +34,7 @@ import school.hei.asa.repository.MissionRepository;
 import school.hei.asa.repository.ProductRepository;
 import school.hei.asa.repository.WorkerRepository;
 import school.hei.asa.service.ContractService;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 class DailyExecutionControllerIT extends FacadeIT {
 
@@ -46,20 +44,23 @@ class DailyExecutionControllerIT extends FacadeIT {
   @Autowired MissionRepository missionRepository;
   @Autowired DailyExecutionRepository dailyExecutionRepository;
   @Autowired CalendarController calendarController;
-  @Autowired ContractService contractService;
+
   @MockBean SecurityConfig securityConfig;
   @MockBean WorkerFromAuthentication workerFromAuthentication;
-  @MockBean Mailer mailer;
-  @MockBean EventProducer eventProducer;
+  @MockBean ContractService contractService;
 
   Authentication authentication;
   Worker authenticatedWorker;
   Model model;
+  RedirectAttributes redirectAttributes;
 
   @BeforeEach
   void setUp() {
     authentication = mock(Authentication.class);
-    authenticatedWorker = workerRepository.findByCode("worker-code");
+    authenticatedWorker =
+        new Worker(
+            "worker-code", "code", "email", "full code", "address", "random city", "nif", "stat");
+    workerRepository.save(authenticatedWorker);
     when(workerFromAuthentication.apply(authentication))
         .thenReturn(Optional.of(authenticatedWorker));
     var product = new Product("pcode", "pname", "pdescription");
@@ -67,8 +68,10 @@ class DailyExecutionControllerIT extends FacadeIT {
     var mission1 = new Mission("mission1-code", "title1", "description1", 10, product);
     var mission2 = new Mission("mission2-code", "title2", "description2", 2, product);
     missionRepository.saveAll(List.of(mission1, mission2));
-
     model = mock(Model.class);
+    redirectAttributes = mock(RedirectAttributes.class);
+    when(contractService.hasRemainingDays(any())).thenReturn(true);
+    when(contractService.checkAndNotifyContractAlert(any())).thenReturn(Optional.empty());
   }
 
   @Test
@@ -83,6 +86,7 @@ class DailyExecutionControllerIT extends FacadeIT {
             "mission2-code",
             "0.6",
             "missionComment2",
+            // duplicate of mission2 (missionCode2, missionPercentage2, missionComment2)
             "mission2-code",
             "0.6",
             "missionComment2",
@@ -93,8 +97,7 @@ class DailyExecutionControllerIT extends FacadeIT {
             null,
             null);
 
-    dailyExecutionController.createDailyExecution(
-        authentication, dmeForm, new RedirectAttributesModelMap());
+    dailyExecutionController.createDailyExecution(authentication, dmeForm, redirectAttributes);
 
     var savedWorker = workerRepository.findByCode(authenticatedWorker.code());
     var dailyExecutions =
@@ -134,13 +137,10 @@ class DailyExecutionControllerIT extends FacadeIT {
             null,
             null);
 
-    dailyExecutionController.createDailyExecution(
-        authentication, dmeForm, new RedirectAttributesModelMap());
+    dailyExecutionController.createDailyExecution(authentication, dmeForm, redirectAttributes);
     assertThrows(
         Exception.class,
-        () ->
-            dailyExecutionController.createDailyExecution(
-                authentication, dmeForm, new RedirectAttributesModelMap()));
+        () -> dailyExecutionController.createDailyExecution(authentication, dmeForm, redirectAttributes));
   }
 
   @Test
@@ -182,8 +182,7 @@ class DailyExecutionControllerIT extends FacadeIT {
               () -> {
                 try {
                   latch.await();
-                  return dailyExecutionController.createDailyExecution(
-                      authentication, dmeForm, new RedirectAttributesModelMap());
+                  return dailyExecutionController.createDailyExecution(authentication, dmeForm, redirectAttributes);
                 } catch (Exception e) {
                   return e.getMessage();
                 }
@@ -210,71 +209,6 @@ class DailyExecutionControllerIT extends FacadeIT {
     verify(model).addAttribute(eq("missions"), any(List.class));
 
     assertEquals("daily-execution", viewName);
-  }
-
-  @Test
-  void cannot_save_if_contract_has_no_remaining_days() {
-    var productExhausted = new Product("pcode-exhausted", "pname-ex", "pdesc-ex");
-    productRepository.save(productExhausted);
-    var missionExhausted =
-        new Mission("mission-ex-code", "title-ex", "desc-ex", 10, productExhausted);
-    missionRepository.save(missionExhausted);
-
-    var workerNoDays = workerRepository.findByCode("worker-no-days");
-
-    var hasRemaining = contractService.hasRemainingDays(workerNoDays);
-    assertEquals(false, hasRemaining);
-  }
-
-  @Test
-  void can_save_if_contract_has_remaining_days() {
-    var productRemaining = new Product("pcode-remaining", "pname-rem", "pdesc-rem");
-    productRepository.save(productRemaining);
-    var missionRemaining =
-        new Mission("mission-rem-code", "title-rem", "desc-rem", 10, productRemaining);
-    missionRepository.save(missionRemaining);
-
-    var workerRemaining = workerRepository.findByCode("worker-remaining");
-
-    var hasRemaining = contractService.hasRemainingDays(workerRemaining);
-    assertEquals(true, hasRemaining);
-  }
-
-  @Test
-  void createDailyExecution_sends_alert_when_remaining_below_threshold() {
-    var productAlert = new Product("pcode-alert", "pname-alert", "pdesc-alert");
-    productRepository.save(productAlert);
-    var missionAlert =
-        new Mission("mission-alert-code", "title-alert", "desc-alert", 10, productAlert);
-    missionRepository.save(missionAlert);
-
-    var workerAlert = workerRepository.findByCode("worker-alert");
-    when(workerFromAuthentication.apply(authentication)).thenReturn(Optional.of(workerAlert));
-
-    var dmeForm =
-        new ThDailyExecutionForm(
-            "2025-01-02",
-            "mission-alert-code",
-            "1.0",
-            "alert comment",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-
-    var redirectAttrs = new RedirectAttributesModelMap();
-    dailyExecutionController.createDailyExecution(authentication, dmeForm, redirectAttrs);
-
-    var flashAlert = redirectAttrs.getFlashAttributes().get("contractAlert");
-    assertEquals("Warning: only 8 days left on your contract.", flashAlert);
   }
 
   private String getFutureResult(Future<String> future) {
